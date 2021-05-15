@@ -314,7 +314,36 @@ df.groupby(["continent", "year"]).agg(mean_gdpPercap = ("gdpPercap", "mean"), su
 
 ### Example 1
 
+#### R
+
+```{r}
+df %>% mutate(country_year = paste(country, year, sep = "_")) 
+```
+
+#### Python
+
+```{python}
+df.assign(country_year = df["country"] + "_" + df["year"].astype("str"))
+```
+
 ### Example 2
+
+#### R
+
+```{r}
+df %>% 
+  group_by(year) %>% 
+  mutate(mean_lifeExp = mean(lifeExp))
+```
+
+#### Python
+
+```{python}
+df["mean_lifeExp"] = df.groupby("year").lifeExp.transform("mean")
+print(df)
+```
+
+
 
 
 
