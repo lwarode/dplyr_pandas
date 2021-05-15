@@ -1,0 +1,322 @@
+---
+title: "R `dplyr` to Python `pandas`"
+author: "Lukas Warode"
+subtitle: A Translation using Gapminder Data
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
+---
+
+The aim of this document is to compare or rather translate the syntax of R's `dplyr` to Python's `pandas`.
+
+For this objective, the Gapminder data source is used, backed by the `gapminder` package, while the original content is inspired by [this source](https://gist.github.com/conormm/fd8b1980c28dd21cfaf6975c86c74d07#file-r-to-python-data-wrangling-basics-md).
+
+```{r rmd setup, include=FALSE}
+knitr::opts_chunk$set(error = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+```{r packages}
+library(tidyverse)
+library(gapminder)
+library(reticulate)
+```
+
+## Python configuration
+
+```{r prerequisites, message=FALSE, results = "hide"}
+use_python("/usr/local/bin/python")
+Sys.setenv("RETICULATE_PYTHON" = "/Users/elweeh/Library/r-miniconda/envs/r-reticulate/bin/python3.7")
+py_config()
+```
+
+```{python, message=FALSE}
+import pandas as pd
+import numpy as np
+```
+
+## Gapminder data
+
+### R
+
+```{r df}
+df <- gapminder
+
+if (! "gapminder.csv" %in% list.files()) {
+  
+  write_csv(df, "gapminder.csv")
+  
+}
+
+# take a look at gapminder data
+DT::datatable(df)
+```
+
+### Python
+
+```{python, message=FALSE}
+df = pd.read_csv("gapminder.csv")
+```
+
+
+## `filter`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% filter(lifeExp > 60 & lifeExp < 80) # filter(df, lifeExp > 60 & lifeExp < 80) 
+```
+
+#### Python
+
+```{python}
+df[(df["lifeExp"] > 60) & (df["lifeExp"] < 80)]
+```
+
+### Example 2
+
+#### R
+
+```{r}
+df %>% filter(country == "Germany") # filter(df, country == "Germany") 
+```
+
+#### Python
+
+```{python}
+df[df["country"] == "Germany"]
+```
+
+### Example 3
+
+#### R
+
+```{r}
+df %>% group_by(continent, year) %>% filter(mean(gdpPercap) > 10000)
+```
+
+#### Python
+
+```{python}
+df.groupby(['continent', 'year']).filter(lambda x: np.mean(x['gdpPercap']) > 10000)
+```
+
+## `select`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% select(country, pop) # select(df, country, pop) 
+```
+
+#### Python
+
+```{python}
+df[["country", "pop"]]
+```
+
+### Example 2
+
+#### R
+
+```{r}
+df %>% select(- continent) # select(df, - continent) 
+```
+
+#### Python
+
+```{python}
+df.drop("continent", axis = 1)
+```
+
+## `arrange`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% arrange(lifeExp) # arrange(df, lifeExp)
+```
+
+#### Python
+
+```{python}
+df.sort_values("lifeExp")
+```
+
+### Example 2
+
+#### R
+
+```{r}
+df %>% arrange(desc(lifeExp)) # arrange(df, desc(lifeExp))
+```
+
+#### Python
+
+```{python}
+df.sort_values("lifeExp", ascending = False)
+```
+
+## `distinct`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% distinct() # distinct(df)
+```
+
+#### Python
+
+```{python}
+df.drop_duplicates()
+```
+
+### Example 2
+
+#### R 
+
+```{r}
+df %>% distinct(continent) # distinct(df, continent)
+```
+
+#### Python
+
+```{python}
+df.drop_duplicates(subset = "continent")
+```
+
+## `sample`
+
+### Example 1
+
+#### R 
+
+```{r}
+df %>% sample_n(100) # sample_n(df, 100)
+```
+
+#### Python
+
+```{python}
+df.sample(100)
+```
+
+### Example 2
+
+#### R 
+
+```{r}
+df %>% sample_frac(0.5) # sample_n(df, 0.5)
+```
+
+#### Python
+
+```{python}
+df.sample(frac = 0.5)
+```
+
+## `group_by`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% group_by(continent) # group_by(df, continent)
+```
+
+#### Python
+
+```{python}
+df.groupby("continent")
+```
+
+### Example 2
+
+#### R
+
+```{r}
+df %>% ungroup() # ungroup(df)
+```
+
+#### Python
+
+```{python}
+df.reset_index()
+```
+
+## `group_by` and `summarise`
+
+### Example 1
+
+#### R
+
+```{r}
+df %>% 
+  group_by(year) %>% 
+  summarise(mean_lifeExp = mean(lifeExp))
+```
+
+#### Python
+
+```{python}
+df.groupby("year")["lifeExp"].mean().reset_index(name = "mean_lifeExp") # df.groupby("year")["lifeExp"].agg(mean_lifeExp = ("lifeExp", "mean"))
+```
+
+### Example 2
+
+#### R
+
+```{r}
+df %>% 
+  group_by(continent, year) %>% 
+  summarise(mean_gdpPercap = mean(gdpPercap), 
+            sum_pop = sum(gdpPercap), 
+            country_n = n())
+```
+
+#### Python
+
+```{python}
+df.groupby(["continent", "year"])["gdpPercap"].agg(["mean", "sum", "count"])
+```
+
+### Example 3
+
+#### R
+
+```{r}
+df %>% 
+  group_by(continent, year) %>% 
+  summarise(mean_gdpPercap = mean(gdpPercap), 
+            sum_pop = sum(pop), 
+            country = first(country))
+```
+
+#### Python
+
+```{python}
+df.groupby(["continent", "year"]).agg(mean_gdpPercap = ("gdpPercap", "mean"), sum_pop = ("pop", "sum"), country = ("country", "first"))  
+```
+
+## `mutate`
+
+### Example 1
+
+### Example 2
+
+
+
+
+
